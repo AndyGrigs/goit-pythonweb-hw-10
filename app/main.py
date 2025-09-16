@@ -1,0 +1,38 @@
+from fastapi import FastAPI
+from app.config import settings
+from app.api.v1.api import api_router
+from app.database.base import Base
+from app.database.connection import engine
+
+# Створення таблиць
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title=settings.app_name,
+    description="REST API for contacts management",
+    version=settings.app_version,
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Підключення роутерів
+app.include_router(api_router, prefix="/api/v1")
+
+@app.get("/")
+def root():
+    """Головна сторінка API"""
+    return {
+        "message": settings.app_name,
+        "version": settings.app_version,
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
+
+@app.get("/health")
+def health_check():
+    """Перевірка здоров'я API"""
+    return {"status": "healthy", "version": settings.app_version}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=settings.debug)
