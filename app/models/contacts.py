@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, Text
+from sqlalchemy import Column, Integer, String, Date, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from app.database.base import Base
 
 
@@ -12,3 +13,6 @@ class Contact(Base):
     phone_number = Column(String(20), nullable=False)
     birth_date = Column(Date, nullable=False)
     additional_data= Column(Text, nullable=True)
+
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User", back_populates="contacts")
