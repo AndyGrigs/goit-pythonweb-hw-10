@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.v1.api import api_router
 from app.database.base import Base
@@ -9,10 +10,19 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.app_name,
-    description="REST API for contacts management",
+    description="REST API for contacts management with JWT authentication",
     version=settings.app_version,
     docs_url="/docs",
     redoc_url="/redoc"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8080"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Підключення роутерів
@@ -25,7 +35,12 @@ def root():
         "message": settings.app_name,
         "version": settings.app_version,
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
+        "endpoints": {
+            "auth": "/api/v1/auth",
+            "users": "/api/v1/users", 
+            "contacts": "/api/v1/contacts"
+        }
     }
 
 @app.get("/health")
