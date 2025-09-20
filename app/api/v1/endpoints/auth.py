@@ -12,13 +12,15 @@ from app.crud.users import (
     verify_user_email
 )
 from app.utils.auth import create_access_token
+from app.services.email import send_verification_email
 from app.config import settings
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-def register(
+async def register(
     user: UserCreate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """Реєстрація нового користувача"""
@@ -38,7 +40,13 @@ def register(
     # Створення користувача
     db_user = create_user(db=db, user=user)
     
-    # TODO: Відправка email для верифікації (додамо пізніше)
+    # Відправка email для верифікації в фоновому режимі
+    if db_user.verification_token:
+        background_tasks.add_task(
+            send_verification_email, 
+            db_user.email, 
+            db_user.verification_token
+        )
     
     return db_user
 
@@ -69,3 +77,29 @@ def verify_email(token: str, db: Session = Depends(get_db)):
         )
     
     return {"message": "Email verified successfully"}
+
+@router.post("/resend-verification")
+async def resend_verification_email(
+    email: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Повторна відправка email верифікації"""
+    user = get_user_by_email(db, email)
+    if not user:
+        return {"message": "If email exists, verification email has been sent"}
+    
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already verified"
+        )
+    
+    if user.verification_token:
+        background_tasks.add_task(
+            send_verification_email,
+            user.email,
+            user.verification_token
+        )
+    
+    return {"message": "If email exists, verification email has been sent"}
